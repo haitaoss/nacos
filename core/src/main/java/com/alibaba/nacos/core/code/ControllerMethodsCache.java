@@ -68,10 +68,15 @@ public class ControllerMethodsCache {
         String path = getPath(request);
         String httpMethod = request.getMethod();
         String urlKey = httpMethod + REQUEST_PATH_SEPARATOR + path.replaceFirst(EnvUtil.getContextPath(), "");
+        // 找缓存
         List<RequestMappingInfo> requestMappingInfos = urlLookup.get(urlKey);
         if (CollectionUtils.isEmpty(requestMappingInfos)) {
             return null;
         }
+        /**
+         * 下面的处理思路和 SpringMVC 很类似
+         * {@link org.springframework.web.servlet.handler.AbstractHandlerMethodMapping#lookupHandlerMethod(String, HttpServletRequest)}
+         */
         List<RequestMappingInfo> matchedInfo = findMatchedInfo(requestMappingInfos, request);
         if (CollectionUtils.isEmpty(matchedInfo)) {
             return null;
@@ -82,12 +87,14 @@ public class ControllerMethodsCache {
             matchedInfo.sort(comparator);
             bestMatch = matchedInfo.get(0);
             RequestMappingInfo secondBestMatch = matchedInfo.get(1);
+            // 为0 说明排序值是一样的，那就无法确定出最优的，直接报错
             if (comparator.compare(bestMatch, secondBestMatch) == 0) {
                 throw new IllegalStateException(
                         "Ambiguous methods mapped for '" + request.getRequestURI() + "': {" + bestMatch + ", "
                                 + secondBestMatch + "}");
             }
         }
+        // 返回方法信息
         return methods.get(bestMatch);
     }
     
@@ -104,9 +111,11 @@ public class ControllerMethodsCache {
             HttpServletRequest request) {
         List<RequestMappingInfo> matchedInfo = new ArrayList<>();
         for (RequestMappingInfo requestMappingInfo : requestMappingInfos) {
+            // 匹配参数
             ParamRequestCondition matchingCondition = requestMappingInfo.getParamRequestCondition()
                     .getMatchingCondition(request);
             if (matchingCondition != null) {
+                // 记录下来
                 matchedInfo.add(requestMappingInfo);
             }
         }
@@ -120,6 +129,7 @@ public class ControllerMethodsCache {
      */
     public void initClassMethod(String packageName) {
         DefaultPackageScan packageScan = new DefaultPackageScan();
+        // 从 packageName 过滤出有 @RequestMapping 的 class（递归的）
         Set<Class<Object>> classesList = packageScan.getTypesAnnotatedWith(packageName, RequestMapping.class);
         for (Class clazz : classesList) {
             initClassMethod(clazz);
@@ -146,7 +156,12 @@ public class ControllerMethodsCache {
         RequestMapping requestMapping = clazz.getAnnotation(RequestMapping.class);
         for (String classPath : requestMapping.value()) {
             for (Method method : clazz.getMethods()) {
+                // 没有 @RequestMapping 注解
                 if (!method.isAnnotationPresent(RequestMapping.class)) {
+                    /**
+                     * 尝试找 @GetMapping、@PostMapping、@PutMapping、@DeleteMapping、@PatchMapping
+                     * 进行处理
+                     */
                     parseSubAnnotations(method, classPath);
                     continue;
                 }
@@ -157,7 +172,11 @@ public class ControllerMethodsCache {
                     requestMethods[0] = RequestMethod.GET;
                 }
                 for (String methodPath : requestMapping.value()) {
+                    // 生成key
                     String urlKey = requestMethods[0].name() + REQUEST_PATH_SEPARATOR + classPath + methodPath;
+                    /**
+                     * 设置关联，其实就是缓存
+                     */
                     addUrlAndMethodRelation(urlKey, requestMapping.params(), method);
                 }
             }
@@ -208,10 +227,13 @@ public class ControllerMethodsCache {
     }
     
     private void addUrlAndMethodRelation(String urlKey, String[] requestParam, Method method) {
+        // 构造出
         RequestMappingInfo requestMappingInfo = new RequestMappingInfo();
         requestMappingInfo.setPathRequestCondition(new PathRequestCondition(urlKey));
         requestMappingInfo.setParamRequestCondition(new ParamRequestCondition(requestParam));
+        // 从缓存中获取
         List<RequestMappingInfo> requestMappingInfos = urlLookup.get(urlKey);
+        // 设置默认值
         if (requestMappingInfos == null) {
             urlLookup.putIfAbsent(urlKey, new ArrayList<>());
             requestMappingInfos = urlLookup.get(urlKey);
@@ -219,7 +241,9 @@ public class ControllerMethodsCache {
             String urlKeyBackup = urlKey + "/";
             urlLookup.putIfAbsent(urlKeyBackup, requestMappingInfos);
         }
+        // 设置进去
         requestMappingInfos.add(requestMappingInfo);
+        // 设置缓存
         methods.put(requestMappingInfo, method);
     }
 }

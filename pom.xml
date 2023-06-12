@@ -606,6 +606,7 @@
         <module>plugin</module>
         <module>plugin-default-impl</module>
         <module>prometheus</module>
+        <module>source-note-nacos</module>
     </modules>
     
     <!-- Default dependencies in all subprojects -->
