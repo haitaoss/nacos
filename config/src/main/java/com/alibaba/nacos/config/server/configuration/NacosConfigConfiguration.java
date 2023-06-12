@@ -44,6 +44,11 @@ public class NacosConfigConfiguration {
     
     @Bean
     public NacosWebFilter nacosWebFilter() {
+        /**
+         * 作用：
+         *  1. 记录web项目的绝对路径
+         *  2. 设置请求和响应编码为 UTF-8
+         */
         return new NacosWebFilter();
     }
     

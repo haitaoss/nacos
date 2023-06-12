@@ -60,10 +60,12 @@ public class NacosWebFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
+        // 编码
         request.setCharacterEncoding(Constants.ENCODE);
         response.setContentType("application/json;charset=" + Constants.ENCODE);
         
         try {
+            // 放行
             chain.doFilter(request, response);
         } catch (IOException | ServletException ioe) {
             DEFAULT_LOG.debug("Filter catch exception, " + ioe.toString(), ioe);
