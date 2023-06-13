@@ -134,9 +134,12 @@ public class DefaultPublisher extends Thread implements EventPublisher {
     @Override
     public boolean publish(Event event) {
         checkIsStart();
+        // 加入到队列中
         boolean success = this.queue.offer(event);
+        // 没成功
         if (!success) {
             LOGGER.warn("Unable to plug in due to interruption, synchronize sending time, event : {}", event);
+            // 直接用当前线程消费消息
             receiveEvent(event);
             return true;
         }
@@ -167,13 +170,16 @@ public class DefaultPublisher extends Thread implements EventPublisher {
     void receiveEvent(Event event) {
         final long currentEventSequence = event.sequence();
         
+        // 没有订阅者
         if (!hasSubscriber()) {
             LOGGER.warn("[NotifyCenter] the {} is lost, because there is no subscriber.", event);
             return;
         }
         
+        // 遍历订阅者
         // Notification single event listener
         for (Subscriber subscriber : subscribers) {
+            // 不适配当前事件
             if (!subscriber.scopeMatches(event)) {
                 continue;
             }
@@ -185,6 +191,7 @@ public class DefaultPublisher extends Thread implements EventPublisher {
                 continue;
             }
             
+            // 通知订阅者
             // Because unifying smartSubscriber and subscriber, so here need to think of compatibility.
             // Remove original judge part of codes.
             notifySubscriber(subscriber, event);
@@ -197,8 +204,10 @@ public class DefaultPublisher extends Thread implements EventPublisher {
         LOGGER.debug("[NotifyCenter] the {} will received by {}", event, subscriber);
         
         final Runnable job = () -> subscriber.onEvent(event);
+        // 从订阅者中拿到 Executor
         final Executor executor = subscriber.executor();
         
+        // 消费事件
         if (executor != null) {
             executor.execute(job);
         } else {

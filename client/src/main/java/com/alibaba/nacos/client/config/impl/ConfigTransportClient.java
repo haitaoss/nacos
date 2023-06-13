@@ -130,9 +130,14 @@ public abstract class ConfigTransportClient {
      * base start client.
      */
     public void start() throws NacosException {
+        // 登录
         securityProxy.login(this.properties);
+        // 启动延时任务 执行登录
         this.executor.scheduleWithFixedDelay(() -> securityProxy.login(properties), 0,
                 this.securityInfoRefreshIntervalMills, TimeUnit.MILLISECONDS);
+        /**
+         * {@link ClientWorker.ConfigRpcTransportClient#startInternal()}
+         * */
         startInternal();
     }
     

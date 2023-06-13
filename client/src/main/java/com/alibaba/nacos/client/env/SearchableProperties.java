@@ -50,23 +50,32 @@ class SearchableProperties implements NacosClientProperties {
     static {
         List<SourceType> initOrder = Arrays.asList(SourceType.PROPERTIES, SourceType.JVM, SourceType.ENV);
         
+        // 从系统属性获取 nacos.env.first 属性值
         String firstEnv = JVM_ARGS_PROPERTY_SOURCE.getProperty(Constants.SysEnv.NACOS_ENV_FIRST);
+        // 为空
         if (StringUtils.isBlank(firstEnv)) {
+            // 从环境变量获取
             firstEnv = SYSTEM_ENV_PROPERTY_SOURCE.getProperty(Constants.SysEnv.NACOS_ENV_FIRST);
         }
         
+        // 有值
         if (StringUtils.isNotBlank(firstEnv)) {
             try {
                 final SourceType sourceType = SourceType.valueOf(firstEnv.toUpperCase());
+                // 不是。说明需要调整顺序
                 if (!sourceType.equals(SourceType.PROPERTIES)) {
+                    // 当前的位置
                     final int index = initOrder.indexOf(sourceType);
+                    // 放到第一的位置
                     final SourceType replacedSourceType = initOrder.set(0, sourceType);
+                    // 交换位置
                     initOrder.set(index, replacedSourceType);
                 }
             } catch (Exception e) {
                 LOGGER.warn("first source type parse error, it will be used default order!", e);
             }
         }
+        // 赋值
         SEARCH_ORDER = initOrder;
         StringBuilder orderInfo = new StringBuilder("properties search order:");
         for (int i = 0; i < SEARCH_ORDER.size(); i++) {
@@ -75,6 +84,7 @@ class SearchableProperties implements NacosClientProperties {
                 orderInfo.append("->");
             }
         }
+        // 打印顺序
         LOGGER.debug(orderInfo.toString());
     }
     
@@ -90,6 +100,10 @@ class SearchableProperties implements NacosClientProperties {
     
     private SearchableProperties(PropertiesPropertySource propertiesPropertySource) {
         this.propertiesPropertySource = propertiesPropertySource;
+        /**
+         * 会根据 {@link #SEARCH_ORDER} 的顺序对 AbstractPropertySource 进行排序，
+         * 读取属性是按照顺序读的
+         */
         this.propertySources = build(propertiesPropertySource, JVM_ARGS_PROPERTY_SOURCE, SYSTEM_ENV_PROPERTY_SOURCE);
     }
     
@@ -206,8 +220,10 @@ class SearchableProperties implements NacosClientProperties {
     }
     
     private List<AbstractPropertySource> build(AbstractPropertySource... propertySources) {
+        // 转成map
         final Map<SourceType, AbstractPropertySource> sourceMap = Arrays.stream(propertySources)
                 .collect(Collectors.toMap(AbstractPropertySource::getType, propertySource -> propertySource));
+        // 根据 SEARCH_ORDER 的顺序收集List
         return SEARCH_ORDER.stream().map(sourceMap::get).collect(Collectors.toList());
     }
     

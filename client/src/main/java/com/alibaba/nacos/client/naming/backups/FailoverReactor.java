@@ -92,8 +92,10 @@ public class FailoverReactor implements Closeable {
      */
     public void init() {
         
+        // 延时任务，文件变更了就重新解析
         executorService.scheduleWithFixedDelay(new SwitchRefresher(), 0L, 5000L, TimeUnit.MILLISECONDS);
         
+        // 延时任务，将 serviceInfoHolder 信息持久化到硬盘中
         executorService.scheduleWithFixedDelay(new DiskFileWriter(), 30, DAY_PERIOD_MINUTES, TimeUnit.MINUTES);
         
         // backup file on startup if failover directory is empty.
@@ -106,7 +108,9 @@ public class FailoverReactor implements Closeable {
                 }
 
                 File[] files = cacheDir.listFiles();
+                // 没有文件，说明备份出问题了
                 if (files == null || files.length <= 0) {
+                    // 执行任务
                     new DiskFileWriter().run();
                 }
             } catch (Throwable e) {
@@ -154,10 +158,14 @@ public class FailoverReactor implements Closeable {
                 
                 long modified = switchFile.lastModified();
                 
+                // 文件变更了
                 if (lastModifiedMillis < modified) {
+                    // 记录变更
                     lastModifiedMillis = modified;
+                    // 文件内容
                     String failover = ConcurrentDiskUtil.getFileContent(failoverDir + UtilAndComs.FAILOVER_SWITCH,
                             Charset.defaultCharset().toString());
+                    // 不是空
                     if (!StringUtils.isEmpty(failover)) {
                         String[] lines = failover.split(DiskCache.getLineSeparator());
                         

@@ -416,6 +416,7 @@ public class ClientWorker implements Closeable {
         
         agent = new ConfigRpcTransportClient(properties, serverListManager);
         int count = ThreadUtils.getSuitableThreadCount(THREAD_MULTIPLE);
+        // 初始化 ScheduledExecutorService
         ScheduledExecutorService executorService = Executors.newScheduledThreadPool(Math.max(count, MIN_THREAD_NUM),
                 r -> {
                     Thread t = new Thread(r);
@@ -424,6 +425,7 @@ public class ClientWorker implements Closeable {
                     return t;
                 });
         agent.setExecutor(executorService);
+        // 启动
         agent.start();
         
     }
@@ -694,13 +696,16 @@ public class ClientWorker implements Closeable {
         
         @Override
         public void startInternal() {
+            // 定时任务
             executor.schedule(() -> {
+                // 没关闭 且 没终止
                 while (!executor.isShutdown() && !executor.isTerminated()) {
                     try {
                         listenExecutebell.poll(5L, TimeUnit.SECONDS);
                         if (executor.isShutdown() || executor.isTerminated()) {
                             continue;
                         }
+                        // 监听配置
                         executeConfigListen();
                     } catch (Throwable e) {
                         LOGGER.error("[ rpc listen execute ] [rpc listen] exception", e);
@@ -782,6 +787,7 @@ public class ClientWorker implements Closeable {
                     ConfigBatchListenRequest configChangeListenRequest = buildConfigRequest(listenCaches);
                     configChangeListenRequest.setListen(true);
                     try {
+                        // 会做很多事情
                         RpcClient rpcClient = ensureRpcClient(taskId);
                         ConfigChangeBatchListenResponse configChangeBatchListenResponse = (ConfigChangeBatchListenResponse) requestProxy(
                                 rpcClient, configChangeListenRequest);

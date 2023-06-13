@@ -75,6 +75,7 @@ public class ServiceInfoHolder implements Closeable {
         } else {
             this.serviceInfoMap = new ConcurrentHashMap<>(16);
         }
+        // 故障切换
         this.failoverReactor = new FailoverReactor(this, cacheDir);
         this.pushEmptyProtection = isPushEmptyProtect(properties);
         this.notifierEventScope = notifierEventScope;
@@ -159,6 +160,7 @@ public class ServiceInfoHolder implements Closeable {
             //empty or error push, just ignore
             return oldService;
         }
+        // 更新
         serviceInfoMap.put(serviceInfo.getKey(), serviceInfo);
         boolean changed = isChangedServiceInfo(oldService, serviceInfo);
         if (StringUtils.isBlank(serviceInfo.getJsonFromServer())) {
@@ -168,8 +170,10 @@ public class ServiceInfoHolder implements Closeable {
         if (changed) {
             NAMING_LOGGER.info("current ips:({}) service: {} -> {}", serviceInfo.ipCount(), serviceInfo.getKey(),
                     JacksonUtils.toJson(serviceInfo.getHosts()));
+            // 发布事件
             NotifyCenter.publishEvent(new InstancesChangeEvent(notifierEventScope, serviceInfo.getName(), serviceInfo.getGroupName(),
                     serviceInfo.getClusters(), serviceInfo.getHosts()));
+            // 持久化到硬盘
             DiskCache.write(serviceInfo, cacheDir);
         }
         return serviceInfo;

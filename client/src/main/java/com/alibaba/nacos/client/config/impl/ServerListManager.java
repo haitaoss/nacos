@@ -92,6 +92,9 @@ public class ServerListManager implements Closeable {
      */
     static final int TIMEOUT = 5000;
     
+    /**
+     * 服务列表是固定的。固定的就写死服务列表，不是固定的就会延时调用接口获取服务列表
+     */
     final boolean isFixed;
     
     boolean isStarted = false;
@@ -193,6 +196,7 @@ public class ServerListManager implements Closeable {
         }
         
         if (StringUtils.isNotEmpty(serverAddrsStr)) {
+            // 标记为true
             this.isFixed = true;
             List<String> serverAddrs = new ArrayList<>();
             StringTokenizer serverAddrsTokens = new StringTokenizer(this.serverAddrsStr, ",;");
@@ -217,6 +221,7 @@ public class ServerListManager implements Closeable {
             if (StringUtils.isBlank(endpoint)) {
                 throw new NacosException(NacosException.CLIENT_INVALID_PARAM, "endpoint is blank");
             }
+            // 标记为false
             this.isFixed = false;
             this.name = initServerName(properties);
             initAddressServerUrl(properties);
@@ -316,12 +321,15 @@ public class ServerListManager implements Closeable {
      */
     public synchronized void start() throws NacosException {
         
+        // 启动了 或者 是固定的
         if (isStarted || isFixed) {
             return;
         }
         
         GetServerListTask getServersTask = new GetServerListTask(addressServerUrl);
+        // 初始化执行几次
         for (int i = 0; i < initServerlistRetryTimes && serverUrls.isEmpty(); ++i) {
+            // 运行
             getServersTask.run();
             try {
                 this.wait((i + 1) * 100L);
@@ -337,6 +345,7 @@ public class ServerListManager implements Closeable {
                     "fail to get NACOS-server serverlist! env:" + name + ", not connnect url:" + addressServerUrl);
         }
         
+        // 启动延时任务，延时执行
         // executor schedules the timer task
         this.executorService.scheduleWithFixedDelay(getServersTask, 0L, 30L, TimeUnit.SECONDS);
         isStarted = true;
@@ -375,6 +384,7 @@ public class ServerListManager implements Closeable {
              get serverlist from nameserver
              */
             try {
+                // 如果改变就更新
                 updateIfChanged(getApacheServerList(url, name));
             } catch (Exception e) {
                 LOGGER.error("[" + name + "][update-serverlist] failed to update serverlist from address server!", e);
@@ -407,6 +417,7 @@ public class ServerListManager implements Closeable {
         iterator = iterator();
         currentServerAddr = iterator.next();
         
+        // 发布事件
         // Using unified event processor, NotifyCenter
         NotifyCenter.publishEvent(new ServerlistChangeEvent());
         LOGGER.info("[{}] [update-serverlist] serverlist updated to {}", name, serverUrls);
@@ -414,6 +425,7 @@ public class ServerListManager implements Closeable {
     
     private List<String> getApacheServerList(String url, String name) {
         try {
+            // 调接口
             HttpRestResult<String> httpResult = nacosRestTemplate.get(url, Header.EMPTY, Query.EMPTY, String.class);
             
             if (httpResult.ok()) {

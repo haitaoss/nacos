@@ -72,14 +72,31 @@ public class NacosConfigService implements ConfigService {
     private final ConfigFilterChainManager configFilterChainManager;
     
     public NacosConfigService(Properties properties) throws NacosException {
+        // 衍生出 NacosClientProperties
         final NacosClientProperties clientProperties = NacosClientProperties.PROTOTYPE.derive(properties);
+        // 检验参数是否合法。会校验 contextPath 的值
         ValidatorUtils.checkInitParam(clientProperties);
         
+        // 获取 namespace 的值设置到 clientProperties 中
         initNamespace(clientProperties);
+        
+        // 构造出 ConfigFilterChainManager
         this.configFilterChainManager = new ConfigFilterChainManager(clientProperties.asProperties());
+        
+        /**
+         * 构造出 ServerListManager，会从 clientProperties 得到 server的信息
+         *
+         * ServerListManager 管理服务列表的，服务列表有两种方式：
+         *  1. 固定的服务列表(写死在配置文件中)
+         *  2. 通过延时任务，定时的获取服务列表
+         * */
         ServerListManager serverListManager = new ServerListManager(clientProperties);
+        // 启动
         serverListManager.start();
         
+        /**
+         * 构造出 ClientWorker
+         * */
         this.worker = new ClientWorker(this.configFilterChainManager, serverListManager, clientProperties);
         // will be deleted in 2.0 later versions
         agent = new ServerHttpAgent(serverListManager);

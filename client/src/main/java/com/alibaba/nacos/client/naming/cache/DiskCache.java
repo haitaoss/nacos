@@ -71,6 +71,7 @@ public class DiskCache {
             
             keyContentBuffer.append(json);
             
+            // 写到文件中
             //Use the concurrent API to ensure the consistency.
             ConcurrentDiskUtil.writeFileContent(file, keyContentBuffer.toString(), Charset.defaultCharset().toString());
             

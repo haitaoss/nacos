@@ -95,9 +95,13 @@ public class NacosNamingService implements NamingService {
         initLogName(nacosClientProperties);
     
         this.notifierEventScope = UUID.randomUUID().toString();
+        // 实例变更通知
         this.changeNotifier = new InstancesChangeNotifier(this.notifierEventScope);
+        // 注册一个处理 InstancesChangeEvent 事件的 Publisher
         NotifyCenter.registerToPublisher(InstancesChangeEvent.class, 16384);
+        // 这个会注册给 处理 InstancesChangeEvent 事件的 Publisher
         NotifyCenter.registerSubscriber(changeNotifier);
+        // 服务信息持有者
         this.serviceInfoHolder = new ServiceInfoHolder(namespace, this.notifierEventScope, nacosClientProperties);
         this.clientProxy = new NamingClientProxyDelegate(this.namespace, serviceInfoHolder, nacosClientProperties, changeNotifier);
     }
