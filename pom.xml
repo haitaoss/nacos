@@ -607,6 +607,9 @@
         <module>plugin-default-impl</module>
         <module>prometheus</module>
         <module>source-note-nacos</module>
+        <module>source-note-nacos/nacos-client-note</module>
+        <module>source-note-nacos/nacos-server-note</module>
+        <module>source-note-nacos/jraft-note</module>
     </modules>
     
     <!-- Default dependencies in all subprojects -->

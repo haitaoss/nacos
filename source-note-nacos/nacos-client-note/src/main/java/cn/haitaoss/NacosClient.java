@@ -6,11 +6,11 @@ import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.config.listener.Listener;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.naming.NamingFactory;
+import com.alibaba.nacos.api.naming.NamingMaintainService;
 import com.alibaba.nacos.api.naming.NamingService;
 import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.alibaba.nacos.api.naming.pojo.Cluster;
 import com.alibaba.nacos.api.naming.pojo.Instance;
-import com.alibaba.nacos.api.naming.pojo.Service;
 import com.alibaba.nacos.api.naming.pojo.healthcheck.impl.Http;
 import com.alibaba.nacos.client.config.NacosConfigService;
 import com.alibaba.nacos.client.env.NacosClientProperties;
@@ -18,7 +18,11 @@ import com.alibaba.nacos.client.naming.NacosNamingMaintainService;
 import com.alibaba.nacos.client.naming.NacosNamingService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -29,15 +33,46 @@ import java.util.concurrent.Executor;
  * email haitaoss@aliyun.com
  * date 2023-06-12 17:24
  */
-@SpringBootApplication(scanBasePackages = "com.alibaba.nacos")
-public class Main {
+@SpringBootApplication
+@RestController
+public class NacosClient {
     
-    public static void main(String[] args) {
-        System.setProperty("nacos.standalone", "true");
-        SpringApplication.run(Main.class, args);
-        //        extracted();
+    private NamingService naming;
+    
+    private ConfigService configService;
+    
+    private NamingMaintainService maintainService;
+    
+    @PostConstruct
+    public void init() throws Exception {
+        String serverList = "http://localhost:8848";
+        naming = NamingFactory.createNamingService(serverList);
+        configService = NacosFactory.createConfigService(serverList);
+        maintainService = NacosFactory.createMaintainService(serverList);
+    }
+    
+    @RequestMapping("/reg")
+    public Object reg(@RequestParam(required = false, defaultValue = "nacos.test.3") String serviceName)
+            throws Exception {
+        // 注册实例
+        naming.registerInstance(serviceName, "127.0.0.1", 8080, "TEST1");
+        return "ok...";
+    }
+    
+    @RequestMapping("/config")
+    public Object config(@RequestParam(required = false, defaultValue = "haitao") String dataId,
+            @RequestParam(required = false, defaultValue = "DEFAULT_GROUP") String group) throws Exception {
+        // 注册实例
+        String content = configService.getConfig(dataId, group, 5000);
+        return content;
+    }
+    
+    public static void main(String[] args) throws Exception {
+        SpringApplication.run(NacosClient.class, args);
+        
         /**
          * {@link NacosFactory}
+         * NotifyCenter 通知中心
          *
          * nacos client 是注册 服务的
          * nacos console 是 server
@@ -54,16 +89,22 @@ public class Main {
          * 啥时候启动的 server ？？？
          *
          * naming 是 server 模块 ？
+         *
+         * jraft 是用于 nacos 集群的数据同步的。
+         *
+         * 读取配置文件，注册实例，
+         *
+         * 服务端、客户端 是如何存储 服务列表、实例信息、配置信息的
+         * 客户端是定时任务 调 服务端的接口获取数据吗？
          */
+        
+        // 注册实例
+        //        registry_instance();
     }
     
-    private static void extracted() {
+    private void extracted() {
         try {
             // 配置相关
-            config();
-            
-            // 注册实例
-            registry_instance();
             
             // 注销实例
             deregistry();
@@ -86,13 +127,13 @@ public class Main {
                     e.printStackTrace();
                 }
             }
-        } catch (NacosException e) {
+        } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
     
-    private static void config() throws NacosException {
+    private void config2() throws NacosException {
         //        用于服务启动的时候从 Nacos 获取配置。
         String serverAddr = "{serverAddr}";
         String dataId = "{dataId}";
@@ -127,7 +168,7 @@ public class Main {
         System.out.println(isRemoveOk);
     }
     
-    private static void nacos_properties() {
+    private void nacos_properties() {
         // NacosClientProperties 类似于 Spring Environment 来统一管理客户端的各种配置项
         // global properties
         NacosClientProperties.PROTOTYPE.setProperty("global-key1", "global-value1");
@@ -143,13 +184,13 @@ public class Main {
         String value = properties2.getProperty("global-key1");
     }
     
-    private static void deListener() throws NacosException {
+    private void deListener() throws NacosException {
         NamingService naming = NamingFactory.createNamingService(System.getProperty("serveAddr"));
         naming.unsubscribe("nacos.test.3", event -> {
         });
     }
     
-    private static void listener() throws NacosException {
+    private void listener() throws NacosException {
         NamingService naming = NamingFactory.createNamingService(System.getProperty("serveAddr"));
         naming.subscribe("nacos.test.3", event -> {
             if (event instanceof NamingEvent) {
@@ -159,52 +200,15 @@ public class Main {
         });
     }
     
-    private static void get_instance() throws NacosException {
+    private void get_instance() throws NacosException {
         NamingService naming = NamingFactory.createNamingService(System.getProperty("serveAddr"));
         System.out.println(naming.getAllInstances("nacos.test.3"));
         System.out.println(naming.selectOneHealthyInstance("nacos.test.3"));
     }
     
-    private static void deregistry() throws NacosException {
+    private void deregistry() throws NacosException {
         NamingService naming = NamingFactory.createNamingService(System.getProperty("serveAddr"));
         naming.deregisterInstance("nacos.test.3", "11.11.11.11", 8888, "DEFAULT");
     }
     
-    private static void registry_instance() throws NacosException {
-        NamingService naming = NamingFactory.createNamingService(System.getProperty("serveAddr"));
-        naming.registerInstance("nacos.test.3", "11.11.11.11", 8888, "TEST1");
-        
-        Instance instance = new Instance();
-        instance.setIp("55.55.55.55");
-        instance.setPort(9999);
-        instance.setHealthy(false);
-        instance.setWeight(2.0);
-        Map<String, String> instanceMeta = new HashMap<>();
-        instanceMeta.put("site", "et2");
-        instance.setMetadata(instanceMeta);
-        
-        Properties prop = new Properties();
-        prop.setProperty(PropertyKeyConst.NAMESPACE, "public");
-        prop.setProperty("serverAddr", "localhost");
-        
-        NacosNamingMaintainService nacosNamingMaintainService = new NacosNamingMaintainService(prop);
-        nacosNamingMaintainService.createService("nacos.test.4", "CNCF", 0.8F);
-        
-        instance.setServiceName("nacos.test.4");
-        
-        Cluster cluster = new Cluster();
-        cluster.setName("TEST5");
-        Http healthChecker = new Http();
-        healthChecker.setExpectedResponseCode(400);
-        healthChecker.setPath("/xxx.html");
-        cluster.setHealthChecker(healthChecker);
-        Map<String, String> clusterMeta = new HashMap<>();
-        clusterMeta.put("xxx", "yyyy");
-        cluster.setMetadata(clusterMeta);
-        
-        instance.setClusterName("TEST5");
-        
-        // 向 server 注册实例
-        naming.registerInstance("nacos.test.4", instance);
-    }
 }

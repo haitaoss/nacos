@@ -6,16 +6,24 @@
     <parent>
         <groupId>com.alibaba.nacos</groupId>
         <artifactId>nacos-all</artifactId>
-        <version>${revision}</version>
-        <relativePath>../pom.xml</relativePath>
+        <version>2.2.3</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
     
     <groupId>cn.haitaoss</groupId>
-    <artifactId>source-note-nacos</artifactId>
-    <packaging>jar</packaging>
+    <artifactId>nacos-server-note</artifactId>
+    
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+    
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.nacos</groupId>
+            <artifactId>nacos-console</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>

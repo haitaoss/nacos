@@ -98,6 +98,7 @@ public class DefaultPublisher extends Thread implements EventPublisher {
     void openEventHandler() {
         try {
             
+            // 休眠等待订阅者注册，最长只会休眠60s
             // This variable is defined to resolve the problem which message overstock in the queue.
             int waitTimes = 60;
             // To ensure that messages are not lost, enable EventHandler when
@@ -107,9 +108,16 @@ public class DefaultPublisher extends Thread implements EventPublisher {
                 waitTimes--;
             }
 
+            // 没有关闭
             while (!shutdown) {
+                // 从堵塞队列取出 even
                 final Event event = queue.take();
+                // 接收消息
                 receiveEvent(event);
+                /**
+                 * volatile + cas 保证 lastEventSequence 设置成功。
+                 * 感觉有点多余了，该方法本身就是线程安全的
+                 */
                 UPDATER.compareAndSet(this, lastEventSequence, Math.max(lastEventSequence, event.sequence()));
             }
         } catch (Throwable ex) {
@@ -191,7 +199,7 @@ public class DefaultPublisher extends Thread implements EventPublisher {
                 continue;
             }
             
-            // 通知订阅者
+            // 通知订阅者。其实就是回调订阅者的方法
             // Because unifying smartSubscriber and subscriber, so here need to think of compatibility.
             // Remove original judge part of codes.
             notifySubscriber(subscriber, event);

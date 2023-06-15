@@ -56,4 +56,11 @@ EnvUtil 会依赖 environment 中的接口
 ## Java SDk 
 https://nacos.io/zh-cn/docs/v2/guide/user/sdk.html
 
-# NotifyCenter 通知中心 
+# 重要的类 
+NotifyCenter 通知中心 
+
+
+## 有用的连接
+Nacos 术语说明 https://nacos.io/zh-cn/docs/v2/concepts.html
+jraft 文档 https://www.sofastack.tech/projects/sofa-jraft/overview/
+jraft 用户指南 https://www.sofastack.tech/projects/sofa-jraft/jraft-user-guide/
