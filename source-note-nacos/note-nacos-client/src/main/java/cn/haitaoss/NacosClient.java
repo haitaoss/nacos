@@ -1,7 +1,7 @@
 package cn.haitaoss;
 
 import com.alibaba.nacos.api.NacosFactory;
-import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.common.Constants;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.config.listener.Listener;
 import com.alibaba.nacos.api.exception.NacosException;
@@ -9,13 +9,18 @@ import com.alibaba.nacos.api.naming.NamingFactory;
 import com.alibaba.nacos.api.naming.NamingMaintainService;
 import com.alibaba.nacos.api.naming.NamingService;
 import com.alibaba.nacos.api.naming.listener.NamingEvent;
-import com.alibaba.nacos.api.naming.pojo.Cluster;
 import com.alibaba.nacos.api.naming.pojo.Instance;
-import com.alibaba.nacos.api.naming.pojo.healthcheck.impl.Http;
+import com.alibaba.nacos.api.naming.remote.request.InstanceRequest;
+import com.alibaba.nacos.api.naming.remote.request.SubscribeServiceRequest;
+import com.alibaba.nacos.api.remote.request.RequestMeta;
 import com.alibaba.nacos.client.config.NacosConfigService;
 import com.alibaba.nacos.client.env.NacosClientProperties;
 import com.alibaba.nacos.client.naming.NacosNamingMaintainService;
 import com.alibaba.nacos.client.naming.NacosNamingService;
+import com.alibaba.nacos.common.notify.Event;
+import com.alibaba.nacos.common.notify.NotifyCenter;
+import com.alibaba.nacos.common.notify.SlowEvent;
+import com.alibaba.nacos.common.notify.listener.Subscriber;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,8 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
@@ -51,12 +55,22 @@ public class NacosClient {
         maintainService = NacosFactory.createMaintainService(serverList);
     }
     
-    @RequestMapping("/reg")
-    public Object reg(@RequestParam(required = false, defaultValue = "nacos.test.3") String serviceName)
+    @RequestMapping("/service")
+    public Object service(@RequestParam(required = false, defaultValue = "haitao2") String serviceName,
+            @RequestParam(required = false, defaultValue = Constants.DEFAULT_GROUP) String groupName) throws Exception {
+        // 维修服务，在 nacos 集群环境才行
+        maintainService.createService(serviceName, groupName);
+        return "ok...";
+    }
+    
+    @RequestMapping("/instance")
+    public Object instance(@RequestParam(required = false, defaultValue = "haitao") String serviceName)
             throws Exception {
         // 注册实例
-        naming.registerInstance(serviceName, "127.0.0.1", 8080, "TEST1");
-        return "ok...";
+        naming.registerInstance(serviceName, "127.0.0.1", 8080);
+        //        naming.registerInstance(serviceName, "127.0.0.1", 8080, "TEST1");
+        List<Instance> allInstances = naming.getAllInstances(serviceName);
+        return allInstances;
     }
     
     @RequestMapping("/config")
@@ -69,7 +83,6 @@ public class NacosClient {
     
     public static void main(String[] args) throws Exception {
         SpringApplication.run(NacosClient.class, args);
-        
         /**
          * {@link NacosFactory}
          * NotifyCenter 通知中心
@@ -96,11 +109,18 @@ public class NacosClient {
          *
          * 服务端、客户端 是如何存储 服务列表、实例信息、配置信息的
          * 客户端是定时任务 调 服务端的接口获取数据吗？
+         *
+         * Nacos Server 是如何存储 服务、实例、配置的，啥时候落库的
+         *
+         * grpc 的使用demo
+         *
+         * client 通过 grpc 调 server 注册实例，server端的处理逻辑
+         * {@link com.alibaba.nacos.naming.remote.rpc.handler.InstanceRequestHandler#handle(InstanceRequest, RequestMeta)}
+         * client 通过 grpc 调 server 查询实例信息，server端的处理逻辑
+         * {@link com.alibaba.nacos.naming.remote.rpc.handler.SubscribeServiceRequestHandler#handle(SubscribeServiceRequest, RequestMeta)}
          */
-        
-        // 注册实例
-        //        registry_instance();
     }
+    
     
     private void extracted() {
         try {
@@ -209,6 +229,25 @@ public class NacosClient {
     private void deregistry() throws NacosException {
         NamingService naming = NamingFactory.createNamingService(System.getProperty("serveAddr"));
         naming.deregisterInstance("nacos.test.3", "11.11.11.11", 8888, "DEFAULT");
+    }
+    
+    
+    private void pubsub() {
+        // 维护 Publish，SubScribe 是注册到 Publish 中
+        NotifyCenter.registerSubscriber(new Subscriber() {
+            @Override
+            public void onEvent(Event event) {
+            
+            }
+            
+            @Override
+            public Class<? extends Event> subscribeType() {
+                return SlowEvent.class;
+            }
+        });
+        // 找到适配的 Publish 发布事件，其实就是遍历 Publish 中的  SubScribe 接收事件
+        NotifyCenter.publishEvent(new Event() {
+        });
     }
     
 }

@@ -1,5 +1,6 @@
 package cn.haitaoss;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -9,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * date 2023-06-12 17:24
  */
 @SpringBootApplication(scanBasePackages = "com.alibaba.nacos")
+@Slf4j
 public class NacosServer {
     
     public static void main(String[] args) {

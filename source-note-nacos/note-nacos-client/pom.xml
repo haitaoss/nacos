@@ -4,20 +4,13 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.alibaba.nacos</groupId>
-        <artifactId>nacos-all</artifactId>
-        <version>2.2.3</version>
-        <relativePath>../../pom.xml</relativePath>
+        <groupId>cn.haitaoss</groupId>
+        <artifactId>source-note-nacos</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     
-    <groupId>cn.haitaoss</groupId>
-    <artifactId>nacos-client-note</artifactId>
-    
-    <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+    <artifactId>note-nacos-client</artifactId>
     
     <dependencies>
         <dependency>
